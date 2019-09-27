@@ -12,3 +12,23 @@ public class scratch{
         }
     }
 }
+
+//writer for socket
+s_out = new PrintWriter(socket.getOutputStream(), true);
+//reader for socket
+s_in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+//Send message to server
+String message = "GET / HTTP/1.1\r\n\r\n";
+s_out.println( message );
+    
+System.out.println("Message send");
+
+//Get response from server
+String response;
+while ((response = s_in.readLine()) != null) {
+    System.out.println( response );
+}
+//close everything
+s_in.close();
+s_out.close();
+socket.close();
