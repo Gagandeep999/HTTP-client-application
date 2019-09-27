@@ -2,6 +2,9 @@
 //java socket client example
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class httpc {
 
@@ -42,6 +45,9 @@ public class httpc {
     //second iteration must have the -v switch case
     private static void get(String[] args) {
 
+        //check to see if its verbose 
+        args=checkMode(args);
+        
          String url = args[1].toString();
          String host;
          String specifics;
@@ -103,6 +109,22 @@ public class httpc {
             //System.exit(1);
         }
             
+    }
+    //based on the lenght of the array, we know the max is 6, so we can play on that to see what options are possibly asked for
+    private static String[] checkMode(String[] args) {
+        List<String> list = new ArrayList<String>(Arrays.asList(args));
+        if(list.contains("-v")){
+            list.remove("-v");
+            vMode=true;
+        }
+        //can use this to check other modes also
+        // if(list.contains("-h")){
+        //     list.remove("-h");
+        //     hMode=true;
+        // }
+        
+        args = list.toArray(new String[0]);
+        return args;
     }
 
     private static void getResponse(boolean verbose) throws IOException {
