@@ -9,9 +9,9 @@ public class httpc{
     public static void main (String[] args){
         // Scanner cmdScanner = new Scanner(System.in);
         String inputString = String.join(" ", args);
-        if (inputString.contains("get")){
+        if (args[0].equalsIgnoreCase("get")){
             get(args, inputString);
-        }else if(inputString.contains("post")){
+        }else if(args[0].equalsIgnoreCase("post")){
             post(args, inputString);
         }else{
             help(inputString);
@@ -37,7 +37,7 @@ public class httpc{
                 +"\nusage: httpc get [-v] [-h key:value] URL\n"
                 +"\nGet executes a HTTP GET request for a given URL.\n"
                 +"\n-v Prints the detail of the response such as protocol, status, and headers.\n"
-                +"-h key:value Associates headers to HTTP Request with the format 'key:value'.";
+                +"-h key:value Associates headers to HTTP Request with the format 'key:value'.\n";
 
         String help_post = "\nhttpc help post\n"
                 +"\nusage: httpc post [-v] [-h key:value] [-d inline-data] [-f file] URL\n"
@@ -65,11 +65,13 @@ public class httpc{
         }
         String uRLString = args[1];
         System.out.println(uRLString);
+        String[] protocolStrings = uRLString.split("//");
+        String[] host_args = protocolStrings[1].split("/", 2);
         try {
-            socket.connect(new InetSocketAddress(uRLString, 80));
+            socket.connect(new InetSocketAddress(host_args[0], 80));
             System.out.println("connected");
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.out.println("ERROR!!!\n"+e.getMessage());
         }
         
 
