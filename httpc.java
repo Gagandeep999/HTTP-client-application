@@ -22,46 +22,75 @@ public class httpc {
     public static void run(String[] args){
         // check first if args is null
         if (args.length == 0) {
-            System.out.println("try httpc --help for more information");
+            System.out.println("try httpc help for more information");
         }
-        // make condition if not equal to help
         else if (args.length == 1 && args[0].equals("help")) {
             getGenericHelpMessage();
         } else if (args.length == 2 && args[0].equals("help")) {
             getSpecificHelpMessage(args[1]);
         } else if (args[0].equals("get")) {
             get(args);
+        } else if (args[0].equals("post")) {
+        //post(args);
+        }
+        else{
+            getGenericHelpMessage();
         }
     }
 
     // methode where we connect with the website and try and send it "GET /
-    // HTTP/1.1\r\n\r\n"
+    //second iteration must have the -v switch case
     private static void get(String[] args) {
 
-        String url = args[1].toString();
-       // System.out.println(url);
-        
-       //needs work
+         String url = args[1].toString();
+         String host;
+         String specifics;
+        if(url.contains("//")){
+            String[] before  = url.split("//",2);
+            String[] before2 = before[1].split("/", 2);
+            if(before2.length == 1) {
+                host=before2[0];
+                specifics="";
+            }
+            else{
+                host=before2[0];
+                specifics=before2[1]; 
+            }
+        }
+        else{
+            String[] before  = url.split("/",2);
+            if(before.length == 1) {
+                host=before[0];
+                specifics="";
+            }
+            else{
+                host=before[0];
+                specifics=before[1];
+            }
+        }
+
+
+       //url needs to be split into different tokens. first big chunk is used when we connect the socket to the Web.
+       //second part is then addedto the message we send. that forms the request
         try {
-            InetAddress IP = InetAddress.getByName(url);
-            System.out.println(IP);
-            socket = new Socket(IP,80);
-            System.out.println("connected");
+
+           // InetAddress IP = InetAddress.getByName(url);
+            // System.out.println(host);
+            socket = new Socket(host,80);
+            // System.out.println("connected");
             //writer for socket
             s_out = new PrintWriter(socket.getOutputStream(), true);
             //reader for socket
             s_in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             //Send message to server
-            String message = "GET / HTTP/1.1\r\n\r\n";
+            String message = "GET /"+specifics+" HTTP/1.0\r\n\r\n";
             s_out.println( message );
                 
-            System.out.println("Message send");
+            // System.out.println("Message send");
             
             //Get response from server
-            String response;
-            while ((response = s_in.readLine()) != null) {
-                System.out.println( response );
-            }
+            getResponse(vMode);
+
             //close everything
             s_in.close();
             s_out.close();
@@ -74,6 +103,25 @@ public class httpc {
             //System.exit(1);
         }
             
+    }
+
+    private static void getResponse(boolean verbose) throws IOException {
+        // System.out.println(verbose);
+        String response = s_in.readLine();
+        if(!verbose){
+            while (!response.isEmpty()) {
+                 //System.out.println("skiping response: "+ response);
+                response = s_in.readLine();
+            }
+            while ((response = s_in.readLine()) != null) {
+                System.out.println( response );
+            }
+        }
+        else{
+            while ((response = s_in.readLine()) != null) {
+                System.out.println( response );
+            }
+        }
     }
 
     // prints the generic help information
@@ -109,8 +157,7 @@ public class httpc {
         }
         //if does not match with any of our cases
         else{
-            System.out.println("do not recognize this action :"+action);
-            System.exit(1);
+            getGenericHelpMessage();
         }
     }
 }
