@@ -7,22 +7,46 @@ import java.util.Scanner;
 
 public class httpc{
     
-    static boolean verboseMode = false;
+    private static boolean isVerbose = false;
+    private static boolean hasHeaderData = false;
+    private static boolean hasInLineData = false;
+    private static boolean readFromFile = false;
+    // private static StringBuilder 
     static Socket socket = new Socket();
     // static PrintWriter socketPrintWriter = new PrintWriter();
     // static BufferedReader socketBufferedReader = new BufferedReader();
     public static void main (String[] args){
+        // cmdParser(args);
         String inputString = String.join(" ", args);
         if ( args.length == 0){
             System.out.println("\nEnter httpc help to get more information.\n");
         }else if (args[0].equalsIgnoreCase("get")){
-            get(args, inputString);
+            // get(args, inputString);
         }else if(args[0].equalsIgnoreCase("post")){
             post(args, inputString);
         }else{
             help(inputString);
         }
     }
+
+    /**
+     * Helper method that parses the arguments
+     */
+    private static void cmdParser(String[] args){
+        for (int i =0; i<args.length; i++){
+            if (args[i].equalsIgnoreCase("-v")){
+                isVerbose = true;
+            }else if (args[i].equalsIgnoreCase("-h")){
+                hasHeaderData = true;
+            }else if (args[i].equalsIgnoreCase("-d")){
+                hasInLineData = true;
+            }else if (args[i].equalsIgnoreCase("-f")){
+                readFromFile = true;
+            }else{
+        
+            }
+       }
+}
 
     /**
      * Prints the help menu.
@@ -71,14 +95,12 @@ public class httpc{
         String arguments = " ";
         String uRLString = " ";
         if (inpuString.contains(" -v ")){
-            verboseMode = true;
+            isVerbose = true;
             uRLString = args[2];
         }else{
             uRLString = args[1];
         }
         
-        // System.out.println(uRLString);
-
         if (uRLString.contains("//")){
             protocol_host_args = uRLString.split("//");
             if (uRLString.contains("/")){
@@ -93,40 +115,33 @@ public class httpc{
         }else{
             hostName = uRLString;
         }
+        System.out.println("hostname: "+hostName);
+        System.out.println("arguments: "+arguments);
 
-        // System.out.println("host: "+hostName);
-        // System.out.println("arguments: "+ arguments);
-        // System.out.println("verbose is: " +verboseMode);
         try {
             socket.connect(new InetSocketAddress(hostName, 80));
-            // System.out.println("connected");
             PrintWriter sockePrintWriterOutputStream = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader socketBufferedReaderInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             String message = "GET /"+arguments+" HTTP/1.0\r\n\r\n";
-            // System.out.println("message to send: "+message);
             sockePrintWriterOutputStream.println(message);
-            // System.out.println("Message send");
             String response = " ";
 
             while ((response = socketBufferedReaderInputStream.readLine()) != null) {
-                if ((response.length()==0) && !verboseMode){
+                if ((response.length()==0) && !isVerbose){
                     StringBuilder res_recvd = new StringBuilder();
                     while ((response = socketBufferedReaderInputStream.readLine()) != null){
                         res_recvd.append(response).append("\r\n");
                     }
                     System.out.println(res_recvd.toString());
-                    verboseMode = false;
+                    isVerbose = false;
                     break;
-                }else if (verboseMode){
+                }else if (isVerbose){
                     System.out.println(response);
                 }
             }
-            // System.out.println(res_recvd);
-
             sockePrintWriterOutputStream.close();
             socketBufferedReaderInputStream.close();
             socket.close();
-
         } catch (Exception e) {
             System.out.println("ERROR!!!\n"+e.getMessage());
         }
@@ -137,6 +152,33 @@ public class httpc{
      * Executes a HTTP POST request for a given URL with inline data or from file.
      */
     public static void post(String[] args, String inpuString){
+        String[] protocol_host_args = new String[2];
+        String hostName = " ";
+        String arguments = " ";
+        String uRLString = " ";
+        if (inpuString.contains(" -v ")){
+            isVerbose = true;
+            uRLString = args[2];
+        }else{
+            uRLString = args[1];
+        }
+        
+        if (uRLString.contains("//")){
+            protocol_host_args = uRLString.split("//");
+            if (uRLString.contains("/")){
+                protocol_host_args = protocol_host_args[1].split("/");
+                hostName = protocol_host_args[0];
+                arguments = protocol_host_args[1];
+            }
+        }else if (uRLString.contains("/")){
+            protocol_host_args = uRLString.split("/", 2);
+            hostName = protocol_host_args[0];
+            arguments = protocol_host_args[1];
+        }else{
+            hostName = uRLString;
+        }
+        System.out.println("hostname "+hostName);
+        System.out.println("argument: "+arguments);
 
     }
 }
