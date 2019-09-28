@@ -8,10 +8,15 @@ import java.util.List;
 
 public class httpc {
 
-    static PrintWriter s_out = null;
+    // where we will store the data for -d call
+    // static String[] inLineData;
+    static List<String> inLineData = new ArrayList<>();
+    static BufferedWriter s_out = null;
     static BufferedReader s_in = null;
     static boolean vMode = false;
     static Socket socket;
+    static String host;
+    static String specifics;
 
     public static void main(String[] args) {
         try {
@@ -34,7 +39,7 @@ public class httpc {
         } else if (args[0].equals("get")) {
             get(args);
         } else if (args[0].equals("post")) {
-        //post(args);
+            post(args);
         }
         else{
             getGenericHelpMessage();
@@ -48,9 +53,49 @@ public class httpc {
         //check to see if its verbose 
         args=checkMode(args);
         
-         String url = args[1].toString();
-         String host;
-         String specifics;
+        String url = args[1].toString();
+        host="";
+        specifics="";
+        getHost_Specifics(url);
+
+       //url needs to be split into different tokens. first big chunk is used when we connect the socket to the Web.
+       //second part is then addedto the message we send. that forms the request
+        try {
+
+            // System.out.println(host);
+            InetAddress addr = InetAddress.getByName(host);
+            socket = new Socket(addr, 80);
+            // System.out.println("connected");
+            //writer for socket
+            s_out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF8"));
+            //reader for socket
+            s_in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            //Send message to server
+            String message = "GET /"+specifics+" HTTP/1.0\r\n\r\n";
+            s_out.write(message);
+            s_out.flush();
+                
+            System.out.println("Message send");
+            
+            //Get response from server
+            getResponse();
+
+            System.out.println("response should have came");
+            //close everything
+            s_in.close();
+            s_out.close();
+            socket.close();
+        }
+            //Host not found
+        catch (IOException e) 
+        {
+            System.err.println("Don't know about host : " + url);
+            //System.exit(1);
+        }
+            
+    }
+    
+    private static void getHost_Specifics(String url) {
         if(url.contains("//")){
             String[] before  = url.split("//",2);
             String[] before2 = before[1].split("/", 2);
@@ -74,63 +119,111 @@ public class httpc {
                 specifics=before[1];
             }
         }
+    }
 
+    // zoom.add("String 1");
+    // zoom.add("String 2");
+    private static void post(String[] args){
+        try{
+            String data="";
+            args = checkMode(args);
+            String[] inLine = inLineData.toArray(new String[0]);
 
-       //url needs to be split into different tokens. first big chunk is used when we connect the socket to the Web.
-       //second part is then addedto the message we send. that forms the request
-        try {
-
-           // InetAddress IP = InetAddress.getByName(url);
-            // System.out.println(host);
-            socket = new Socket(host,80);
-            // System.out.println("connected");
-            //writer for socket
-            s_out = new PrintWriter(socket.getOutputStream(), true);
-            //reader for socket
+            for (int i =0;i<inLine.length;i=i+2){
+                if(i>0){
+                    data=data+"&";
+                }
+                data=data+URLEncoder.encode(inLine[i], "UTF-8") + "=" + URLEncoder.encode(inLine[i+1], "UTF-8");
+            }
+            String url = args[1].toString();
+            getHost_Specifics(url);
+            //System.out.println(host);
+            InetAddress addr = InetAddress.getByName(host);
+            socket = new Socket(addr, 80);
+            //socket.connect(new InetSocketAddress(host, 80));
+            //s_out = new PrintWriter(socket.getOutputStream(), true);
             s_in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            //Send message to server
-            String message = "GET /"+specifics+" HTTP/1.0\r\n\r\n";
-            s_out.println( message );
-                
-            // System.out.println("Message send");
-            
-            //Get response from server
-            getResponse(vMode);
+            s_out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF8"));
+            // String message ="POST /post HTTP/1.0\r\n"
+            //                 +"Content-Length: " + data.length() + "\r\n"
+            //                 +"Content-Type: application/x-www-form-urlencoded\r\n"
+            //                 +"\r\n"
+            //                 +data;
+            //System.out.println(message);
+            // s_out.write(message);          
+            // s_out.write(data);
 
-            //close everything
+            s_out.write("POST /"+specifics+" HTTP/1.0\r\n");
+            s_out.write("Content-Length: "+data.length()+"\r\n");
+            s_out.write("Content-Type: application/x-www-form-urlencoded\r\n");
+            s_out.write("\r\n");
+            // // System.out.println("message is: "+message);
+            // // System.out.println("data is: "+data);
+            s_out.write(data);
+            s_out.flush();
+            //System.out.println("before");
+            getResponse();
+            //System.out.println("after");
             s_in.close();
             s_out.close();
-            socket.close();
+
+        }catch(Exception e){
+            System.out.println("something went wrong");
+            System.exit(1);
         }
-            //Host not found
-        catch (IOException e) 
-        {
-            System.err.println("Don't know about host : " + url);
-            //System.exit(1);
-        }
-            
     }
-    //based on the lenght of the array, we know the max is 6, so we can play on that to see what options are possibly asked for
+
+    // based on the lenght of the array, we know the max is 6, so we can play on
+    // that to see what options are possibly asked for
     private static String[] checkMode(String[] args) {
         List<String> list = new ArrayList<String>(Arrays.asList(args));
+        //System.out.println(list);
         if(list.contains("-v")){
             list.remove("-v");
             vMode=true;
         }
         //can use this to check other modes also
-        // if(list.contains("-h")){
-        //     list.remove("-h");
-        //     hMode=true;
-        // }
+        if(list.contains("-d")){
+            int index = list.indexOf("-d");
+            //System.out.println(index);
+            String temp ="";
+            try{
+                temp = list.get(index + 1);
+                if(!temp.contains("{")){
+                    throw new Exception();
+                }
+                
+            }
+            //in case the user doesnt input anything as inline data
+            catch( Exception e){
+                System.out.println
+                    ("error ---- did not assign any inline data or failed to follow format\n"
+                    +"-d {key:value}");
+                System.exit(1);
+            }
+            temp= temp.replace("{","");
+            temp= temp.replace("}","");
+            temp= temp.replace("\"","");
+            temp= temp.replace(" ","");
+            String[] before=temp.split(",");
+            for(int i = 0; i<before.length;i++){
+                String[] before2 = before[i].split(":");
+                inLineData.add(before2[0]);
+                inLineData.add(before2[1]);
+            }
+            //System.out.println(inLineData);
+            list.remove("-d");
+            list.remove(index);
+        }
         
         args = list.toArray(new String[0]);
         return args;
     }
 
-    private static void getResponse(boolean verbose) throws IOException {
-        // System.out.println(verbose);
+    private static void getResponse() throws IOException {
+        
         String response = s_in.readLine();
-        if(!verbose){
+        if(!vMode){
             while (!response.isEmpty()) {
                  //System.out.println("skiping response: "+ response);
                 response = s_in.readLine();
