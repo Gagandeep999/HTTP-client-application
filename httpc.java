@@ -11,6 +11,7 @@ public class httpc {
     // where we will store the data for -d call
     // static String[] inLineData;
     static List<String> inLineData = new ArrayList<>();
+    static List<String> headerData = new ArrayList<>();
     static BufferedWriter s_out = null;
     static BufferedReader s_in = null;
     static boolean vMode = false;
@@ -75,12 +76,12 @@ public class httpc {
             s_out.write(message);
             s_out.flush();
                 
-            System.out.println("Message send");
+           // System.out.println("Message send");
             
             //Get response from server
             getResponse();
 
-            System.out.println("response should have came");
+            //System.out.println("response should have came");
             //close everything
             s_in.close();
             s_out.close();
@@ -126,7 +127,9 @@ public class httpc {
     private static void post(String[] args){
         try{
             String data="";
+            
             args = checkMode(args);
+           // System.out.println(headerData);
             String[] inLine = inLineData.toArray(new String[0]);
 
             for (int i =0;i<inLine.length;i=i+2){
@@ -135,8 +138,12 @@ public class httpc {
                 }
                 data=data+URLEncoder.encode(inLine[i], "UTF-8") + "=" + URLEncoder.encode(inLine[i+1], "UTF-8");
             }
-            String url = args[1].toString();
+            //System.out.println(args.length);
+            //data.replace("\"","");
+            String url = args[1];
+            
             getHost_Specifics(url);
+            
             //System.out.println(host);
             InetAddress addr = InetAddress.getByName(host);
             socket = new Socket(addr, 80);
@@ -144,22 +151,22 @@ public class httpc {
             //s_out = new PrintWriter(socket.getOutputStream(), true);
             s_in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             s_out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF8"));
-            // String message ="POST /post HTTP/1.0\r\n"
-            //                 +"Content-Length: " + data.length() + "\r\n"
-            //                 +"Content-Type: application/x-www-form-urlencoded\r\n"
-            //                 +"\r\n"
-            //                 +data;
-            //System.out.println(message);
-            // s_out.write(message);          
-            // s_out.write(data);
-
-            s_out.write("POST /"+specifics+" HTTP/1.0\r\n");
-            s_out.write("Content-Length: "+data.length()+"\r\n");
-            s_out.write("Content-Type: application/x-www-form-urlencoded\r\n");
-            s_out.write("\r\n");
+            String message ="POST /"+specifics+" HTTP/1.0\r\n"
+                            +"Content-Length: " + data.length() + "\r\n"
+                            +getHeaderData()+ "\r\n"
+                            +"\r\n"
+                            +data;
+            System.out.println(message);
+            s_out.write(message);          
+            // System.out.println("hello");
+            // s_out.write("POST /"+specifics+getHeaderData()+" HTTP/1.0\r\n");
+            // System.out.println("hello2");
+            // s_out.write("Content-Length: "+data.length()+"\r\n");
+            // s_out.write("Content-Type: application/x-www-form-urlencoded\r\n");
+            // s_out.write("\r\n");
             // // System.out.println("message is: "+message);
             // // System.out.println("data is: "+data);
-            s_out.write(data);
+            // s_out.write(data);
             s_out.flush();
             //System.out.println("before");
             getResponse();
@@ -214,10 +221,57 @@ public class httpc {
             //System.out.println(inLineData);
             list.remove("-d");
             list.remove(index);
+            //System.out.println(list + "just removed d");
         }
-        
+        int i=0;
+        while(list.contains("-h")){
+            int index = list.indexOf("-h");
+            String temp;
+            //System.out.println(index);
+            try{
+                temp = list.get(index + 1);
+                String[] before=temp.split(":");
+                headerData.add(before[i]);
+                headerData.add(before[i+1]);
+                list.remove("-h");
+                list.remove(index);
+                //System.out.println(list + "just removed h");
+            }
+            //in case the user doesnt input anything as inline data
+            catch( Exception e){
+                System.out.println
+                    ("error ---- did not assign any header data or failed to follow format\n"
+                    +"-h key:value");
+                System.exit(1);
+            }
+            i=i+2;
+        }
+        System.out.println(list);
         args = list.toArray(new String[0]);
         return args;
+    }
+
+    private static String getHeaderData() {
+        String text="";
+        //System.out.println(headerData);
+        boolean headerInfo =false;
+        while(!headerData.isEmpty()){
+            headerInfo=true;
+            ///
+
+            //if we have multiple headers.... be carefull must go back to new line
+            
+            ///
+            text=headerData.get(0)+": "+headerData.get(1);
+            System.out.println(text);
+            headerData.remove(0);
+            headerData.remove(0);
+        }
+        if(headerInfo==false){
+            text="Content-Type: application/x-www-form-urlencoded\r\n";
+        }
+        //System.out.println(text);
+        return text;
     }
 
     private static void getResponse() throws IOException {
