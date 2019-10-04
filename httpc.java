@@ -8,8 +8,6 @@ import java.util.List;
 
 public class httpc {
 
-    // where we will store the data for -d call
-    // static String[] inLineData;
     static List<String> inLineData = new ArrayList<>();
     static List<String> headerData = new ArrayList<>();
     static BufferedWriter s_out = null;
@@ -48,46 +46,31 @@ public class httpc {
     }
 
     // methode where we connect with the website and try and send it "GET /
-    // second iteration must have the -v switch case
     private static void get(String[] args) {
 
-        // check to see if its verbose
+        // check to see the modes that are activated
         args = checkMode(args);
-
         String url = args[1].toString();
         host = "";
         specifics = "";
-
         getHost_Specifics(url);
-
        //url needs to be split into different tokens. first big chunk is used when we connect the socket to the Web.
        //second part is then addedto the message we send. that forms the request
         try {
-
-            // System.out.println(host);
             InetAddress addr = InetAddress.getByName(host);
             socket = new Socket(addr, 80);
-            // System.out.println("connected");
             //writer for socket
             s_out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF8"));
             //reader for socket
             s_in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             //Send message to server
-            //String message = "GET /"+specifics+" HTTP/1.0\r\n\r\n";
             String message ="GET /"+specifics+" HTTP/1.0\r\n"
                             +getHeaderData()
                             +"\r\n";
             System.out.println(message);
             s_out.write(message);
             s_out.flush();
-                
-           // System.out.println("Message send");
-            
-            //Get response from server
             getResponse();
-
-            //System.out.println("response should have came");
-            //close everything
             s_in.close();
             s_out.close();
             socket.close();
@@ -96,7 +79,7 @@ public class httpc {
         catch (IOException e) 
         {
             System.err.println("Don't know about host : " + url);
-            //System.exit(1);
+            System.exit(1);
         }
             
     }
@@ -127,8 +110,6 @@ public class httpc {
         }
     }
 
-    // zoom.add("String 1");
-    // zoom.add("String 2");
     private static void post(String[] args){
         try{
             String data="";
@@ -155,17 +136,10 @@ public class httpc {
                     data=data+(inLine[i]);
                 }
             }
-            //System.out.println(args.length);
-            //data.replace("\"","");
-            String url = args[1];
-            
+            String url = args[1]; 
             getHost_Specifics(url);
-            
-            //System.out.println(host);
             InetAddress addr = InetAddress.getByName(host);
             socket = new Socket(addr, 80);
-            //socket.connect(new InetSocketAddress(host, 80));
-            //s_out = new PrintWriter(socket.getOutputStream(), true);
             s_in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             s_out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF8"));
             String message ="POST /"+specifics+" HTTP/1.0\r\n"
@@ -175,19 +149,8 @@ public class httpc {
                             +data;
             System.out.println(message);
             s_out.write(message);          
-            // System.out.println("hello");
-            // s_out.write("POST /"+specifics+getHeaderData()+" HTTP/1.0\r\n");
-            // System.out.println("hello2");
-            // s_out.write("Content-Length: "+data.length()+"\r\n");
-            // s_out.write("Content-Type: application/x-www-form-urlencoded\r\n");
-            // s_out.write("\r\n");
-            // // System.out.println("message is: "+message);
-            // // System.out.println("data is: "+data);
-            // s_out.write(data);
             s_out.flush();
-            //System.out.println("before");
             getResponse();
-            //System.out.println("after");
             s_in.close();
             s_out.close();
 
@@ -197,11 +160,8 @@ public class httpc {
         }
     }
 
-    // based on the lenght of the array, we know the max is 6, so we can play on
-    // that to see what options are possibly asked for
     private static String[] checkMode(String[] args) {
         List<String> list = new ArrayList<String>(Arrays.asList(args));
-        //System.out.println(list);
         if(list.contains("-v")){
             list.remove("-v");
             vMode=true;
@@ -215,7 +175,6 @@ public class httpc {
             System.out.println("in the d");
             d_Switch=true;
             int index = list.indexOf("-d");
-            //System.out.println(index);
             String temp ="";
             try{
                 temp = list.get(index + 1);
@@ -241,18 +200,14 @@ public class httpc {
                 inLineData.add(before2[0]);
                 inLineData.add(before2[1]);
             }
-            
-            //System.out.println(inLineData);
             list.remove("-d");
             list.remove(index);
-            //System.out.println(list + "just removed d");
         }
         int i=0;
         while(list.contains("-h")){
             
             int index = list.indexOf("-h");
             String temp;
-            //System.out.println(index);
             try{
                 temp = list.get(index + 1);
                 String[] before=temp.split(":");
@@ -260,7 +215,6 @@ public class httpc {
                 headerData.add(before[i+1]);
                 list.remove("-h");
                 list.remove(index);
-                //System.out.println(list + "just removed h");
             }
             //in case the user doesnt input anything as inline data
             catch( Exception e){
@@ -271,7 +225,6 @@ public class httpc {
             }
             i=i+2;
         }
-        //System.out.println(d_Switch);
         if(list.contains("-f") && d_Switch==false){
             System.out.println("hello");
             f_Switch=true;
@@ -297,7 +250,6 @@ public class httpc {
                     ("error ---- problem opening the file\n");
                 System.exit(1);
             }
-
         }
         System.out.println(list);
         args = list.toArray(new String[0]);
@@ -310,10 +262,6 @@ public class httpc {
         boolean headerInfo =false;
         while(!headerData.isEmpty()){
             headerInfo=true;
-     
-            //if we have multiple headers.... be carefull must go back to new line
-            //should take care of that now
-
             text=headerData.get(0)+": "+headerData.get(1)+"\r\n";
             System.out.println(text);
             headerData.remove(0);
