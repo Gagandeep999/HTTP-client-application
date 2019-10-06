@@ -67,7 +67,7 @@ public class httpc {
             String message ="GET /"+specifics+" HTTP/1.0\r\n"
                             +getHeaderData()
                             +"\r\n";
-            System.out.println(message);
+            //System.out.println(message);
             s_out.write(message);
             s_out.flush();
             getResponse();
@@ -114,8 +114,6 @@ public class httpc {
         try{
             String data="";
             args = checkMode(args);
-        
-           System.out.println(inLineData);
             String[] inLine = inLineData.toArray(new String[0]);
 //
 //need to figure out what to do when we gave more than one inline data
@@ -147,7 +145,7 @@ public class httpc {
                             +getHeaderData()
                             +"\r\n"
                             +data;
-            System.out.println(message);
+            //System.out.println(message);
             s_out.write(message);          
             s_out.flush();
             getResponse();
@@ -172,11 +170,10 @@ public class httpc {
         }
         //can use this to check other modes also
         if(list.contains("-d") && f_Switch==false){
-            System.out.println("in the d");
             d_Switch=true;
             int index = list.indexOf("-d");
             String temp ="";
-            try{
+            try{  
                 temp = list.get(index + 1);
                 if(!temp.contains("{")){
                     throw new Exception();
@@ -194,7 +191,7 @@ public class httpc {
             temp= temp.replace("}","");
             temp= temp.replace("\"","");
             temp= temp.replace(" ","");
-            String[] before=temp.split(",");
+            String[] before=temp.split("-");
             for(int i = 0; i<before.length;i++){
                 String[] before2 = before[i].split(":");
                 inLineData.add(before2[0]);
@@ -205,7 +202,6 @@ public class httpc {
         }
         int i=0;
         while(list.contains("-h")){
-            
             int index = list.indexOf("-h");
             String temp;
             try{
@@ -226,10 +222,8 @@ public class httpc {
             i=i+2;
         }
         if(list.contains("-f") && d_Switch==false){
-            System.out.println("hello");
             f_Switch=true;
             int index = list.indexOf("-f");
-            System.out.println("hello");
             String path;
             //in case file not found
             try{
@@ -251,26 +245,22 @@ public class httpc {
                 System.exit(1);
             }
         }
-        System.out.println(list);
         args = list.toArray(new String[0]);
         return args;
     }
 
     private static String getHeaderData() {
         String text="";
-        //System.out.println(headerData);
         boolean headerInfo =false;
         while(!headerData.isEmpty()){
             headerInfo=true;
             text=headerData.get(0)+": "+headerData.get(1)+"\r\n";
-            System.out.println(text);
             headerData.remove(0);
             headerData.remove(0);
         }
         if(headerInfo==false){
             text="Content-Type: application/x-www-form-urlencoded\r\n";
         }
-        //System.out.println(text);
         return text;
     }
 
@@ -279,7 +269,6 @@ public class httpc {
         String response = s_in.readLine();
         if(!vMode){
             while (!response.isEmpty()) {
-                 //System.out.println("skiping response: "+ response);
                 response = s_in.readLine();
             }
             while ((response = s_in.readLine()) != null) {
