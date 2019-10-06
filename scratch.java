@@ -71,13 +71,18 @@ public class scratch {
             System.out.println("params: "+params);
             // String message = "POST /post HTTP/1.0\r\n" + "Content-Length: "+params.length()+"\r\n" + "Content-Type: application/x-www-form-urlencoded\r\n" + "\r\n" + params;
             // System.out.println("message is : "+message);
-            wr.write("POST /post HTTP/1.0\r\n");
-            wr.write("Content-Length: "+params.length()+"\r\n");
-            wr.write("Content-Type: application/x-www-form-urlencoded\r\n");
-            wr.write("\r\n");
- 
+            String message = "POST /post HTTP/1.0\r\n";
+            // message = message.concat("Content-Length: "+params.length()+"\r\n");
+            // message = message.concat("Content-Type: application/x-www-form-urlencoded\r\n");
+            message = message.concat("\r\n");
+            // message = message.concat(params);
+            // wr.write("POST /post HTTP/1.0\r\n");
+            // wr.write("Content-Length: "+params.length()+"\r\n");
+            // // wr.write("Content-Type: application/x-www-form-urlencoded\r\n");
+            // wr.write("\r\n");
+            System.out.println(message);
             // Send parameters
-            wr.write(params);
+            wr.write(message);
             wr.flush();
  
             // Get response
