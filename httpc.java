@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.URLEncoder;
 
 public class httpc{
     
@@ -56,7 +57,7 @@ public class httpc{
                 i++;
             }else if (args[i].equalsIgnoreCase("-d")){
                 hasInLineData = true;
-                inLineData = ("\r\n"+args[i+1]);
+                inLineData = (args[i+1]);
                 i++;
             }else if (args[i].equalsIgnoreCase("-f")){
                 readFromFile = true;
@@ -94,6 +95,34 @@ public class httpc{
             hostName = url;
         }
     }
+
+    /**
+     * function to convert the inline data to utf-8 type
+     */
+    public static String inLineDataParser(String inLineData) {
+        String param = "";
+        if (inLineData.charAt(0)=='{'){
+            inLineData = inLineData.substring(1, inLineData.length()-1);
+        }
+        String[] args_arrayStrings = inLineData.split("&|,");
+        try{
+            for (String s: args_arrayStrings){
+                String[] each_args_arrayStrings = s.split("=|:");
+                for (String s1: each_args_arrayStrings){
+                    if (s1.charAt(0)=='"'){
+                        s1 = s1.substring(1, s1.length()-1);
+                    }
+                    param = param.concat(URLEncoder.encode(s1, "UTF-8"));
+                    param = param.concat("=");
+                }
+                param = param.concat("&");
+            }
+        }catch (Exception e){
+            System.out.println("exception");
+        }
+        return param.substring(0, param.length() - 2);
+        }   
+    
 
     /**
      * Prints the help menu.
@@ -186,13 +215,13 @@ public class httpc{
      */
     public static void post(String inpuString){
         urlParser(inpuString);
-        if (readFromFile){
-            //wrtie a method that reads from file and put it in the same 
-            //variable inLineData.
-        }
+        
         if (hasInLineData && readFromFile){
             System.out.println("Cannot have -d and -f together. Exiting the application.");
             System.exit(1);
+        }else if (readFromFile){
+            //wrtie a method that reads from file and put it in the same 
+            //variable inLineData.
         }else if(!hasHeaderData && !hasInLineData && !readFromFile){
             messagBuilder = "POST /"+(arguments)+(" HTTP/1.0\r\n\r\n");
             // messagBuilder = messagBuilder.concat(headerData+"\r\n");
@@ -201,12 +230,14 @@ public class httpc{
             messagBuilder = "POST /"+(arguments)+(" HTTP/1.0\r\n");
             messagBuilder = messagBuilder.concat(headerData+"\r\n");
         }else{
+            String new_InLineData = inLineDataParser(inLineData);
             messagBuilder = "POST /"+(arguments)+(" HTTP/1.0\r\n");
-            messagBuilder = messagBuilder.concat(headerData);
-            messagBuilder = messagBuilder.concat(inLineData+"\r\n");
+            messagBuilder = messagBuilder.concat("Content-Length: "+new_InLineData.length()+"\r\n");
+            messagBuilder = messagBuilder.concat(headerData+"\r\n");
+            messagBuilder = messagBuilder.concat(new_InLineData);
         }
 
-        System.out.println("message is: \n"+messagBuilder);
+        // System.out.println("message is: \n"+messagBuilder);
 
         try {
             socket.connect(new InetSocketAddress(hostName, 80));
