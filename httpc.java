@@ -5,7 +5,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.Scanner;
 
 public class httpc{
     
@@ -26,9 +25,7 @@ public class httpc{
     private static String[] protocol_host_args = new String[2];
 
     static Socket socket = new Socket();
-    // private static StringBuilder 
-    // static PrintWriter socketPrintWriter = new PrintWriter();
-    // static BufferedReader socketBufferedReader = new BufferedReader();
+
     public static void main (String[] args){
         // cmdParser(args);
         // String inputString = String.join(" ", args);
