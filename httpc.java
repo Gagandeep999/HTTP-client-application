@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.PrintWriter;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
@@ -24,9 +25,12 @@ public class httpc{
     private static String arguments = "";
     private static String messagBuilder = "";
     private static String[] protocol_host_args = new String[2];
+    private static Socket socket = new Socket();
 
-    static Socket socket = new Socket();
-
+    /**
+     * Starting point of the application.
+     * @param args cmd arguments.
+     */
     public static void main (String[] args){
         // cmdParser(args);
         // String inputString = String.join(" ", args);
@@ -45,7 +49,8 @@ public class httpc{
     }
 
     /**
-     * Helper method that parses the arguments
+     * This method takes the cmd args and parses them according to the different conditions of the application.
+     * @param args an array of the command line arguments.
      */
     public static void cmdParser(String[] args){
         for (int i =0; i<args.length; i++){
@@ -62,6 +67,7 @@ public class httpc{
             }else if (args[i].equalsIgnoreCase("-f")){
                 readFromFile = true;
                 filePath = (args[i+1]);
+                System.out.println(filePath);
                 i++;
             }else if (args[i].equalsIgnoreCase("get")){
                 isGetRequest = true;
@@ -77,7 +83,7 @@ public class httpc{
 
     /**
      * this methods parses the url into host and arguments
-     * @param url
+     * @param url is the url to which the get/post request is made. example - 'httpbin.org/post'
      */
     public static void urlParser(String url) {
         if (url.contains("//")){
@@ -97,14 +103,19 @@ public class httpc{
     }
 
     /**
-     * function to convert the inline data to utf-8 type
+     * This method takes the data provided after the -d option and parses it.
+     * @param inLineData is the data from the cmd after -d
+     * @return a string that contains the same data but formatted as UTF-8 format
      */
     public static String inLineDataParser(String inLineData) {
+        //replaces all whitespace and non-visible character from the inline data
+        System.out.println("inside inLineDataParser: "+inLineData);
+        inLineData = inLineData.replaceAll("\\s", "");
         String param = "";
         if (inLineData.charAt(0)=='{'){
             inLineData = inLineData.substring(1, inLineData.length()-1);
         }
-        String[] args_arrayStrings = inLineData.split("&|,");
+        String[] args_arrayStrings = inLineData.split("&|,|\n");
         try{
             for (String s: args_arrayStrings){
                 String[] each_args_arrayStrings = s.split("=|:");
@@ -115,14 +126,99 @@ public class httpc{
                     param = param.concat(URLEncoder.encode(s1, "UTF-8"));
                     param = param.concat("=");
                 }
+                param = param.substring(0, param.length()-1);
                 param = param.concat("&");
             }
         }catch (Exception e){
             System.out.println("exception");
         }
-        return param.substring(0, param.length() - 2);
+        return param.substring(0, param.length() - 1);
         }   
     
+    /**
+     * This method read data from the file and puts it in the inLineData variable.
+     * @param filePath
+     * @return a string containing the data from the file
+     */
+    public static String readingFromFile(String filePath) {
+        String line_ = "";
+        try{
+            File file = new File(filePath);
+            BufferedReader input_file = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+            String line;
+            while((line = input_file.readLine()) != null) {
+                line_ = line_.concat(line);
+            }
+            input_file.close();
+        }catch(Exception e){
+            System.out.println("error in readingFromFile!!!"+e.getMessage());
+        }
+        return line_;
+    }
+    
+    /**
+     * This method creates the message that is to be sent over by the socket. 
+     * @param requestType either GET or POST
+     * @param arguments everything after the .org/"..." or .com/"..."
+     * @param hasHeader add to the message only if headers are provided.
+     * @param hasData only for the post request. If it has data add it to the message.
+     * @return a string that is ready to be send over the socket.
+     */
+    public static String createMessage(String requestType, String arguments, boolean hasHeader, boolean hasData) {
+        String message = "";
+        final String HTTP = (" HTTP/1.0\r\n");
+        if (requestType=="GET /") {
+            message = requestType+arguments+HTTP+"\r\n";
+            if (hasHeader){
+                message = message.concat(headerData);
+            }
+        } else {
+            message = requestType+arguments+HTTP;
+            message = message.concat("Content-Length: "+inLineData.length()+"\r\n");
+            if (!hasHeader){
+                message = message.concat("\r\n");
+            }else{
+                message = message.concat(headerData+"\r\n");
+            }
+            if(hasData){
+                message = message.concat(inLineData);
+            }
+        }
+        return message;
+    }
+    
+    /**
+     * This is a common method that can be called for both get and post requests.
+     */
+    public static void sendMessage(String messageBuilder) {
+        try {
+            socket.connect(new InetSocketAddress(hostName, 80));
+            BufferedWriter socketBufferedWriterOutputStream = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            BufferedReader socketBufferedReaderInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            socketBufferedWriterOutputStream.write(messagBuilder);
+            socketBufferedWriterOutputStream.flush();
+            String response = " ";
+
+            while ((response = socketBufferedReaderInputStream.readLine()) != null) {
+                if ((response.length()==0) && !isVerbose){
+                    StringBuilder res_recvd = new StringBuilder();
+                    while ((response = socketBufferedReaderInputStream.readLine()) != null){
+                        res_recvd.append(response).append("\r\n");
+                    }
+                    System.out.println(res_recvd.toString());
+                    isVerbose = false;
+                    break;
+                }else if (isVerbose){
+                    System.out.println(response);
+                }
+            }
+            socketBufferedWriterOutputStream.close();
+            socketBufferedReaderInputStream.close();
+            socket.close();
+        } catch (Exception e) {
+            System.out.println("ERROR from the sendMessage method.\n"+e.getMessage());
+        }
+    }
 
     /**
      * Prints the help menu.
@@ -170,43 +266,39 @@ public class httpc{
      */
     public static void get(String inpuString){
         urlParser(inpuString);  
-        
-        if (!hasHeaderData){
-            messagBuilder = "GET /"+(arguments)+(" HTTP/1.0\r\n\r\n");
-            // messagBuilder = messagBuilder.concat(headerData+"\r\n");
-        }  
-        else{
-            messagBuilder = "GET /"+(arguments)+(" HTTP/1.0\r\n");
-            messagBuilder = messagBuilder.concat(headerData+"\r\n");
-        }
-        // System.out.println(messagBuilder);
-        try {
-            socket.connect(new InetSocketAddress(hostName, 80));
-            BufferedWriter socketBufferedWriterOutputStream = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            BufferedReader socketBufferedReaderInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            socketBufferedWriterOutputStream.write(messagBuilder);
-            socketBufferedWriterOutputStream.flush();
-            String response = " ";
 
-            while ((response = socketBufferedReaderInputStream.readLine()) != null) {
-                if ((response.length()==0) && !isVerbose){
-                    StringBuilder res_recvd = new StringBuilder();
-                    while ((response = socketBufferedReaderInputStream.readLine()) != null){
-                        res_recvd.append(response).append("\r\n");
-                    }
-                    System.out.println(res_recvd.toString());
-                    isVerbose = false;
-                    break;
-                }else if (isVerbose){
-                    System.out.println(response);
-                }
-            }
-            socketBufferedWriterOutputStream.close();
-            socketBufferedReaderInputStream.close();
-            socket.close();
-        } catch (Exception e) {
-            System.out.println("ERROR!!!\n"+e.getMessage());
-        }
+        messagBuilder = createMessage("GET /", arguments, hasHeaderData, false);
+
+        sendMessage(messagBuilder);
+        
+        // System.out.println(messagBuilder);
+        // try {
+        //     socket.connect(new InetSocketAddress(hostName, 80));
+        //     BufferedWriter socketBufferedWriterOutputStream = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+        //     BufferedReader socketBufferedReaderInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        //     socketBufferedWriterOutputStream.write(messagBuilder);
+        //     socketBufferedWriterOutputStream.flush();
+        //     String response = " ";
+
+        //     while ((response = socketBufferedReaderInputStream.readLine()) != null) {
+        //         if ((response.length()==0) && !isVerbose){
+        //             StringBuilder res_recvd = new StringBuilder();
+        //             while ((response = socketBufferedReaderInputStream.readLine()) != null){
+        //                 res_recvd.append(response).append("\r\n");
+        //             }
+        //             System.out.println(res_recvd.toString());
+        //             isVerbose = false;
+        //             break;
+        //         }else if (isVerbose){
+        //             System.out.println(response);
+        //         }
+        //     }
+        //     socketBufferedWriterOutputStream.close();
+        //     socketBufferedReaderInputStream.close();
+        //     socket.close();
+        // } catch (Exception e) {
+        //     System.out.println("ERROR from the get() method.\n"+e.getMessage());
+        // }
         
     }
     
@@ -219,53 +311,49 @@ public class httpc{
         if (hasInLineData && readFromFile){
             System.out.println("Cannot have -d and -f together. Exiting the application.");
             System.exit(1);
-        }else if (readFromFile){
-            //wrtie a method that reads from file and put it in the same 
-            //variable inLineData.
-        }else if(!hasHeaderData && !hasInLineData && !readFromFile){
-            messagBuilder = "POST /"+(arguments)+(" HTTP/1.0\r\n\r\n");
-            // messagBuilder = messagBuilder.concat(headerData+"\r\n");
-        }  
-        else if(hasHeaderData && !hasInLineData){
-            messagBuilder = "POST /"+(arguments)+(" HTTP/1.0\r\n");
-            messagBuilder = messagBuilder.concat(headerData+"\r\n");
-        }else{
-            String new_InLineData = inLineDataParser(inLineData);
-            messagBuilder = "POST /"+(arguments)+(" HTTP/1.0\r\n");
-            messagBuilder = messagBuilder.concat("Content-Length: "+new_InLineData.length()+"\r\n");
-            messagBuilder = messagBuilder.concat(headerData+"\r\n");
-            messagBuilder = messagBuilder.concat(new_InLineData);
         }
+        else if (readFromFile){
+            hasInLineData = true;
+            inLineData = readingFromFile(filePath);
+            inLineData = inLineDataParser(inLineData);
+        }
+        else if (hasInLineData){
+            inLineData = inLineDataParser(inLineData);
+        }
+
+        messagBuilder = createMessage("post /", arguments, hasHeaderData, hasInLineData);
 
         // System.out.println("message is: \n"+messagBuilder);
 
-        try {
-            socket.connect(new InetSocketAddress(hostName, 80));
-            BufferedWriter socketBufferedWriterOutputStream = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            BufferedReader socketBufferedReaderInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            socketBufferedWriterOutputStream.write(messagBuilder);
-            socketBufferedWriterOutputStream.flush();
+        sendMessage(messagBuilder);
 
-            String response = " ";
-            while ((response = socketBufferedReaderInputStream.readLine()) != null) {
-                if ((response.length()==0) && !isVerbose){
-                    StringBuilder res_recvd = new StringBuilder();
-                    while ((response = socketBufferedReaderInputStream.readLine()) != null){
-                        res_recvd.append(response).append("\r\n");
-                    }
-                    System.out.println(res_recvd.toString());
-                    isVerbose = false;
-                    break;
-                }else if (isVerbose){
-                    System.out.println(response);
-                }
-            }
-            socketBufferedWriterOutputStream.close();
-            socketBufferedReaderInputStream.close();
-            socket.close();
-        } catch (Exception e) {
-            System.out.println("ERROR!!!\n"+e.getMessage());
-        }
+        // try {
+        //     socket.connect(new InetSocketAddress(hostName, 80));
+        //     BufferedWriter socketBufferedWriterOutputStream = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+        //     BufferedReader socketBufferedReaderInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        //     socketBufferedWriterOutputStream.write(messagBuilder);
+        //     socketBufferedWriterOutputStream.flush();
+
+        //     String response = " ";
+        //     while ((response = socketBufferedReaderInputStream.readLine()) != null) {
+        //         if ((response.length()==0) && !isVerbose){
+        //             StringBuilder res_recvd = new StringBuilder();
+        //             while ((response = socketBufferedReaderInputStream.readLine()) != null){
+        //                 res_recvd.append(response).append("\r\n");
+        //             }
+        //             System.out.println(res_recvd.toString());
+        //             isVerbose = false;
+        //             break;
+        //         }else if (isVerbose){
+        //             System.out.println(response);
+        //         }
+        //     }
+        //     socketBufferedWriterOutputStream.close();
+        //     socketBufferedReaderInputStream.close();
+        //     socket.close();
+        // } catch (Exception e) {
+        //     System.out.println("ERROR!!!\n"+e.getMessage());
+        // }
 
     }
 }
