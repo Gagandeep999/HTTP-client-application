@@ -32,8 +32,6 @@ public class httpc{
      * @param args cmd arguments.
      */
     public static void main (String[] args){
-        // cmdParser(args);
-        // String inputString = String.join(" ", args);
         if ( args.length == 0){
             System.out.println("\nEnter httpc help to get more information.\n");
         }else{
@@ -67,7 +65,6 @@ public class httpc{
             }else if (args[i].equalsIgnoreCase("-f")){
                 readFromFile = true;
                 filePath = (args[i+1]);
-                System.out.println(filePath);
                 i++;
             }else if (args[i].equalsIgnoreCase("get")){
                 isGetRequest = true;
@@ -109,7 +106,6 @@ public class httpc{
      */
     public static String inLineDataParser(String inLineData) {
         //replaces all whitespace and non-visible character from the inline data
-        System.out.println("inside inLineDataParser: "+inLineData);
         inLineData = inLineData.replaceAll("\\s", "");
         String param = "";
         if (inLineData.charAt(0)=='{'){
@@ -130,7 +126,7 @@ public class httpc{
                 param = param.concat("&");
             }
         }catch (Exception e){
-            System.out.println("exception");
+            System.out.println("Exception in inLineDataParser.\n"+e.getMessage());
         }
         return param.substring(0, param.length() - 1);
         }   
@@ -151,7 +147,7 @@ public class httpc{
             }
             input_file.close();
         }catch(Exception e){
-            System.out.println("error in readingFromFile!!!"+e.getMessage());
+            System.out.println("Exception in readingFromFile!!!"+e.getMessage());
         }
         return line_;
     }
@@ -269,37 +265,7 @@ public class httpc{
 
         messagBuilder = createMessage("GET /", arguments, hasHeaderData, false);
 
-        sendMessage(messagBuilder);
-        
-        // System.out.println(messagBuilder);
-        // try {
-        //     socket.connect(new InetSocketAddress(hostName, 80));
-        //     BufferedWriter socketBufferedWriterOutputStream = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-        //     BufferedReader socketBufferedReaderInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        //     socketBufferedWriterOutputStream.write(messagBuilder);
-        //     socketBufferedWriterOutputStream.flush();
-        //     String response = " ";
-
-        //     while ((response = socketBufferedReaderInputStream.readLine()) != null) {
-        //         if ((response.length()==0) && !isVerbose){
-        //             StringBuilder res_recvd = new StringBuilder();
-        //             while ((response = socketBufferedReaderInputStream.readLine()) != null){
-        //                 res_recvd.append(response).append("\r\n");
-        //             }
-        //             System.out.println(res_recvd.toString());
-        //             isVerbose = false;
-        //             break;
-        //         }else if (isVerbose){
-        //             System.out.println(response);
-        //         }
-        //     }
-        //     socketBufferedWriterOutputStream.close();
-        //     socketBufferedReaderInputStream.close();
-        //     socket.close();
-        // } catch (Exception e) {
-        //     System.out.println("ERROR from the get() method.\n"+e.getMessage());
-        // }
-        
+        sendMessage(messagBuilder);        
     }
     
     /**
@@ -323,37 +289,6 @@ public class httpc{
 
         messagBuilder = createMessage("post /", arguments, hasHeaderData, hasInLineData);
 
-        // System.out.println("message is: \n"+messagBuilder);
-
         sendMessage(messagBuilder);
-
-        // try {
-        //     socket.connect(new InetSocketAddress(hostName, 80));
-        //     BufferedWriter socketBufferedWriterOutputStream = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-        //     BufferedReader socketBufferedReaderInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        //     socketBufferedWriterOutputStream.write(messagBuilder);
-        //     socketBufferedWriterOutputStream.flush();
-
-        //     String response = " ";
-        //     while ((response = socketBufferedReaderInputStream.readLine()) != null) {
-        //         if ((response.length()==0) && !isVerbose){
-        //             StringBuilder res_recvd = new StringBuilder();
-        //             while ((response = socketBufferedReaderInputStream.readLine()) != null){
-        //                 res_recvd.append(response).append("\r\n");
-        //             }
-        //             System.out.println(res_recvd.toString());
-        //             isVerbose = false;
-        //             break;
-        //         }else if (isVerbose){
-        //             System.out.println(response);
-        //         }
-        //     }
-        //     socketBufferedWriterOutputStream.close();
-        //     socketBufferedReaderInputStream.close();
-        //     socket.close();
-        // } catch (Exception e) {
-        //     System.out.println("ERROR!!!\n"+e.getMessage());
-        // }
-
     }
 }
