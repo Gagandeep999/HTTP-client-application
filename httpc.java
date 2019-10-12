@@ -110,6 +110,7 @@ public class httpc {
         }
     }
 
+    // sends a HTTP POST request
     private static void post(String[] args){
         try{
             String data="";
@@ -145,7 +146,7 @@ public class httpc {
                             +getHeaderData()
                             +"\r\n"
                             +data;
-            //System.out.println(message);
+            System.out.println(message);
             s_out.write(message);          
             s_out.flush();
             getResponse();
@@ -153,11 +154,12 @@ public class httpc {
             s_out.close();
 
         }catch(Exception e){
-            System.out.println("something went wrong");
+            System.out.println("error in post");
             System.exit(1);
         }
     }
 
+    // this method splits the cmd arguments
     private static String[] checkMode(String[] args) {
         List<String> list = new ArrayList<String>(Arrays.asList(args));
         if(list.contains("-v")){
@@ -191,7 +193,7 @@ public class httpc {
             temp= temp.replace("}","");
             temp= temp.replace("\"","");
             temp= temp.replace(" ","");
-            String[] before=temp.split("-");
+            String[] before=temp.split(",");
             for(int i = 0; i<before.length;i++){
                 String[] before2 = before[i].split(":");
                 inLineData.add(before2[0]);
@@ -249,6 +251,7 @@ public class httpc {
         return args;
     }
 
+    // only to get the header data
     private static String getHeaderData() {
         String text="";
         boolean headerInfo =false;
@@ -264,6 +267,7 @@ public class httpc {
         return text;
     }
 
+    // this method formats and print the output depending on the options
     private static void getResponse() throws IOException {
         
         String response = s_in.readLine();
