@@ -173,7 +173,7 @@ public class httpc{
         if (requestType=="GET /") {
             message = requestType+arguments+HTTP+"\r\n";
             if (hasHeader){
-                message = message.concat(headerData);
+                message = message.replace("\r\n\r\n", ("\r\n"+headerData+"\r\n"));
             }
         } else {
             message = requestType+arguments+HTTP;
@@ -271,7 +271,7 @@ public class httpc{
         urlParser(inpuString);  
 
         messagBuilder = createMessage("GET /", arguments, hasHeaderData, false);
-
+        System.out.println(messagBuilder);
         sendMessage(messagBuilder);        
     }
     
