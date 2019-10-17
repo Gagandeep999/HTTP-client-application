@@ -271,7 +271,7 @@ public class httpc{
         urlParser(inpuString);  
 
         messagBuilder = createMessage("GET /", arguments, hasHeaderData, false);
-        System.out.println(messagBuilder);
+
         sendMessage(messagBuilder);        
     }
     
