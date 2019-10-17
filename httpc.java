@@ -24,6 +24,7 @@ public class httpc{
     private static String hostName = "";
     private static String arguments = "";
     private static String messagBuilder = "";
+    private static String defaultPort = "80";
     private static String[] protocol_host_args = new String[2];
     private static Socket socket = new Socket();
 
@@ -95,7 +96,13 @@ public class httpc{
             hostName = protocol_host_args[0];
             arguments = protocol_host_args[1];
         }else{
-            hostName = url;
+            hostName=url;
+        }
+
+        if (hostName.contains("localhost")){
+            protocol_host_args = hostName.split(":", 2);
+            hostName = protocol_host_args[0];
+            defaultPort = protocol_host_args[1];
         }
     }
 
@@ -188,7 +195,7 @@ public class httpc{
      */
     public static void sendMessage(String messageBuilder) {
         try {
-            socket.connect(new InetSocketAddress(hostName, 80));
+            socket.connect(new InetSocketAddress(hostName, Integer.parseInt(defaultPort)));
             BufferedWriter socketBufferedWriterOutputStream = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             BufferedReader socketBufferedReaderInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             socketBufferedWriterOutputStream.write(messagBuilder);
