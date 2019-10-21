@@ -178,15 +178,18 @@ public class httpc{
         } else {
             message = requestType+arguments+HTTP;
             message = message.concat("Content-Length: "+inLineData.length()+"\r\n");
-            if (!hasHeader){
-                message = message.concat("\r\n");
-            }else{
-                message = message.concat(headerData+"\r\n");
-            }
+            message = message.concat(headerData+"\r\n");
+            // if (!hasHeader){
+            //     message = message.concat("\r\n");
+            // }else{
+            //     message = message.concat(headerData+"\r\n");
+            // }
             if(hasData){
-                message = message.concat(inLineData);
+                message = message.concat(inLineData+"\r\n");
             }
         }
+        message = message.concat("\r\n");
+        System.out.println(message);
         return message;
     }
     
@@ -294,7 +297,7 @@ public class httpc{
             inLineData = inLineDataParser(inLineData);
         }
 
-        messagBuilder = createMessage("post /", arguments, hasHeaderData, hasInLineData);
+        messagBuilder = createMessage("POST /", arguments, hasHeaderData, hasInLineData);
 
         sendMessage(messagBuilder);
     }
