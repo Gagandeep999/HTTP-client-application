@@ -2,4 +2,4 @@
 #Gagandeep Singh 40037231
 #Tarek Deghayli 40022064
 
-cURL like command like implementation in java
+cURL like command line implementation in java

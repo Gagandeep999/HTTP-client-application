@@ -1,325 +1,311 @@
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.URLEncoder;
 
-//java socket client example
-import java.io.*;
-import java.net.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+public class httpc{
+    
+    private static boolean isVerbose = false;
+    private static boolean isGetRequest = false;
+    private static boolean isPostRequest = false;
+    private static boolean needHelp = false;
+    private static boolean hasHeaderData = false;
+    private static boolean hasInLineData = false;
+    private static boolean readFromFile = false;
+    private static String headerData = "";
+    private static String inLineData = "";
+    private static String filePath = "";
+    private static String url = "";
+    private static String hostName = "";
+    private static String outsideDirectory = "";
+    private static String arguments = "";
+    private static String messagBuilder = "";
+    private static String defaultPort = "8080";
+    private static String[] protocol_host_args = new String[2];
+    private static Socket socket = new Socket();
 
-public class httpc {
-
-    static List<String> inLineData = new ArrayList<>();
-    static List<String> headerData = new ArrayList<>();
-    static BufferedWriter s_out = null;
-    static BufferedReader s_in = null;
-    static boolean vMode = false;
-    static boolean f_Switch = false;
-    static boolean d_Switch = false;
-    static Socket socket;
-    static String host;
-    static String specifics;
-
-    public static void main(String[] args) {
-        try {
-            run(args);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            System.out.println("error --- unable to run httpc");
+    /**
+     * Starting point of the application.
+     * @param args cmd arguments.
+     */
+    public static void main (String[] args){
+        if ( args.length == 0){
+            System.out.println("\nEnter httpc help to get more information.\n");
+        }else{
+            cmdParser(args);
+        }
+        if (needHelp) {
+            help();
+        }else if(isGetRequest){
+            get(url);
+        }else if (isPostRequest){
+            post(url);
         }
     }
 
-    public static void run(String[] args) {
-        // check first if args is null
-        if (args.length == 0) {
-            System.out.println("try httpc help for more information");
-        } else if (args.length == 1 && args[0].equals("help")) {
-            getGenericHelpMessage();
-        } else if (args.length == 2 && args[0].equals("help")) {
-            getSpecificHelpMessage(args[1]);
-        } else if (args[0].equals("get")) {
-            get(args);
-        } else if (args[0].equals("post")) {
-            post(args);
-        } else {
-            getGenericHelpMessage();
+    /**
+     * This method takes the cmd args and parses them according to the different conditions of the application.
+     * @param args an array of the command line arguments.
+     */
+    public static void cmdParser(String[] args){
+        for (int i =0; i<args.length; i++){
+            if (args[i].equalsIgnoreCase("-v")){
+                isVerbose = true;
+            }else if (args[i].equalsIgnoreCase("-h")){
+                hasHeaderData = true;
+                headerData = headerData.concat(args[i+1]+"\r\n");
+                i++;
+            }else if (args[i].equalsIgnoreCase("-d")){
+                hasInLineData = true;
+                inLineData = (args[i+1]);
+                i++;
+            }else if (args[i].equalsIgnoreCase("-f")){
+                readFromFile = true;
+                filePath = (args[i+1]);
+                i++;
+            }else if (args[i].equalsIgnoreCase("get")){
+                isGetRequest = true;
+            }else if (args[i].equalsIgnoreCase("post")){
+                isPostRequest = true;
+            }else if (args[i].equalsIgnoreCase("help")){
+                needHelp = true;
+            }else{
+                url = (args[i]);
+            }
+       }
+    }
+
+    /**
+     * this methods parses the url into host and arguments
+     * @param url is the url to which the get/post request is made. example - 'httpbin.org/post'
+     */
+    public static void urlParser(String url) {
+        if(url.contains("../")){
+            protocol_host_args = url.split("/", 2);
+            outsideDirectory = protocol_host_args[0];
+            arguments = protocol_host_args[1];
+        }else if (url.contains("//")){
+            protocol_host_args = url.split("//");
+            if (url.contains("/")){
+                protocol_host_args = protocol_host_args[1].split("/");
+                hostName = protocol_host_args[0];
+                arguments = protocol_host_args[1];
+            }
+        }else if (url.contains("/")){
+            protocol_host_args = url.split("/", 2);
+            hostName = protocol_host_args[0];
+            arguments = protocol_host_args[1];
+        }
+        
+        else{
+            hostName=url;
+        }
+
+        if (hostName.contains("localhost")){
+            protocol_host_args = hostName.split(":", 2);
+            hostName = protocol_host_args[0];
+            defaultPort = protocol_host_args[1];
         }
     }
 
-    // methode where we connect with the website and try and send it "GET /
-    private static void get(String[] args) {
-
-        // check to see the modes that are activated
-        args = checkMode(args);
-        String url = args[1].toString();
-        host = "";
-        specifics = "";
-        getHost_Specifics(url);
-       //url needs to be split into different tokens. first big chunk is used when we connect the socket to the Web.
-       //second part is then addedto the message we send. that forms the request
-        try {
-            InetAddress addr = InetAddress.getByName(host);
-            socket = new Socket(addr, 80);
-            //writer for socket
-            s_out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF8"));
-            //reader for socket
-            s_in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            //Send message to server
-            String message ="GET /"+specifics+" HTTP/1.0\r\n"
-                            +getHeaderData()
-                            +"\r\n";
-            //System.out.println(message);
-            s_out.write(message);
-            s_out.flush();
-            getResponse();
-            s_in.close();
-            s_out.close();
-            socket.close();
+    /**
+     * This method takes the data provided after the -d option and parses it.
+     * @param inLineData is the data from the cmd after -d
+     * @return a string that contains the same data but formatted as UTF-8 format
+     */
+    public static String inLineDataParser(String inLineData) {
+        //replaces all whitespace and non-visible character from the inline data
+        inLineData = inLineData.replaceAll("\\s", "");
+        String param = "";
+        if (inLineData.charAt(0)=='{'){
+            inLineData = inLineData.substring(1, inLineData.length()-1);
         }
-            //Host not found
-        catch (IOException e) 
-        {
-            System.err.println("Don't know about host : " + url);
-            System.exit(1);
+        String[] args_arrayStrings = inLineData.split("&|,|\n");
+        try{
+            for (String s: args_arrayStrings){
+                String[] each_args_arrayStrings = s.split("=|:");
+                for (String s1: each_args_arrayStrings){
+                    if (s1.charAt(0)=='"'){
+                        s1 = s1.substring(1, s1.length()-1);
+                    }
+                    param = param.concat(URLEncoder.encode(s1, "UTF-8"));
+                    param = param.concat("=");
+                }
+                param = param.substring(0, param.length()-1);
+                param = param.concat("&");
+            }
+        }catch (Exception e){
+            System.out.println("Exception in inLineDataParser.\n"+e.getMessage());
         }
-            
+        return param.substring(0, param.length() - 1);
+        }   
+    
+    /**
+     * This method read data from the file and puts it in the inLineData variable.
+     * @param filePath
+     * @return a string containing the data from the file
+     */
+    public static String readingFromFile(String filePath) {
+        String line_ = "";
+        try{
+            File file = new File(filePath);
+            BufferedReader input_file = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+            String line;
+            while((line = input_file.readLine()) != null) {
+                line_ = line_.concat(line);
+            }
+            input_file.close();
+        }catch(Exception e){
+            System.out.println("Exception in readingFromFile!!!"+e.getMessage());
+        }
+        return line_;
     }
     
-    private static void getHost_Specifics(String url) {
-        if(url.contains("//")){
-            String[] before  = url.split("//",2);
-            String[] before2 = before[1].split("/", 2);
-            if(before2.length == 1) {
-                host=before2[0];
-                specifics="";
+    /**
+     * This method creates the message that is to be sent over by the socket. 
+     * @param requestType either GET or POST
+     * @param arguments everything after the .org/"..." or .com/"..."
+     * @param hasHeader add to the message only if headers are provided.
+     * @param hasData only for the post request. If it has data add it to the message.
+     * @return a string that is ready to be send over the socket.
+     */
+    public static String createMessage(String requestType, String arguments, boolean hasHeader, boolean hasData) {
+        String message = "";
+        final String HTTP = (" HTTP/1.0\r\n");
+        if (requestType=="GET /") {
+            message = "GET "+outsideDirectory+"/"+arguments+HTTP+"\r\n";
+            if (hasHeader){
+                message = message.replace("\r\n\r\n", ("\r\n"+headerData+"\r\n"));
             }
-            else{
-                host=before2[0];
-                specifics=before2[1]; 
+        } else {
+            message = requestType+arguments+HTTP;
+            message = message.concat("Content-Length: "+inLineData.length()+"\r\n");
+            message = message.concat(headerData+"\r\n");
+            // if (!hasHeader){
+            //     message = message.concat("\r\n");
+            // }else{
+            //     message = message.concat(headerData+"\r\n");
+            // }
+            if(hasData){
+                message = message.concat(inLineData+"\r\n");
             }
         }
-        else{
-            String[] before  = url.split("/",2);
-            if(before.length == 1) {
-                host=before[0];
-                specifics="";
-            }
-            else{
-                host=before[0];
-                specifics=before[1];
-            }
-        }
+        message = message.concat("\r\n");
+        System.out.println(message);
+        return message;
     }
+    
+    /**
+     * This is a common method that can be called for both get and post requests.
+     */
+    public static void sendMessage(String messageBuilder) {
+        try {
+            socket.connect(new InetSocketAddress(hostName, Integer.parseInt(defaultPort)));
+            BufferedWriter socketBufferedWriterOutputStream = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            BufferedReader socketBufferedReaderInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            socketBufferedWriterOutputStream.write(messagBuilder);
+            socketBufferedWriterOutputStream.flush();
+            String response = " ";
 
-    // sends a HTTP POST request
-    private static void post(String[] args){
-        try{
-            String data="";
-            args = checkMode(args);
-            String[] inLine = inLineData.toArray(new String[0]);
-//
-//need to figure out what to do when we gave more than one inline data
-//          
-            if(d_Switch){
-                for (int i =0;i<inLine.length;i=i+2){
-                    if(i>0){
-                        data=data+"&";
+            while ((response = socketBufferedReaderInputStream.readLine()) != null) {
+                if ((response.length()==0) && !isVerbose){
+                    StringBuilder res_recvd = new StringBuilder();
+                    while ((response = socketBufferedReaderInputStream.readLine()) != null){
+                        res_recvd.append(response).append("\r\n");
                     }
-                    data=data+URLEncoder.encode(inLine[i], "UTF-8") + "=" + URLEncoder.encode(inLine[i+1], "UTF-8");
+                    System.out.println(res_recvd.toString());
+                    isVerbose = false;
+                    break;
+                }else if (isVerbose){
+                    System.out.println(response);
                 }
             }
-            if(f_Switch){
-                for (int i =0;i<inLine.length;i++){
-                    if(i>0){
-                        data=data+"&";
-                    }
-                    data=data+(inLine[i]);
-                }
-            }
-            String url = args[1]; 
-            getHost_Specifics(url);
-            InetAddress addr = InetAddress.getByName(host);
-            socket = new Socket(addr, 80);
-            s_in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            s_out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF8"));
-            String message ="POST /"+specifics+" HTTP/1.0\r\n"
-                            +"Content-Length: " + data.length() + "\r\n"
-                            +getHeaderData()
-                            +"\r\n"
-                            +data;
-            System.out.println(message);
-            s_out.write(message);          
-            s_out.flush();
-            getResponse();
-            s_in.close();
-            s_out.close();
-
-        }catch(Exception e){
-            System.out.println("error in post");
-            System.exit(1);
+            socketBufferedWriterOutputStream.close();
+            socketBufferedReaderInputStream.close();
+            socket.close();
+        } catch (Exception e) {
+            System.out.println("ERROR from the sendMessage method.\n"+e.getMessage());
         }
     }
 
-    // this method splits the cmd arguments
-    private static String[] checkMode(String[] args) {
-        List<String> list = new ArrayList<String>(Arrays.asList(args));
-        if(list.contains("-v")){
-            list.remove("-v");
-            vMode=true;
-        }
-        if(list.contains("-d") && list.contains("-f")){
-            System.out.println("error ---- cannot have \"d\" and \"f\" options at the same time.\n");
-            System.exit(1);
-        }
-        //can use this to check other modes also
-        if(list.contains("-d") && f_Switch==false){
-            d_Switch=true;
-            int index = list.indexOf("-d");
-            String temp ="";
-            try{  
-                temp = list.get(index + 1);
-                if(!temp.contains("{")){
-                    throw new Exception();
-                }
-                
-            }
-            //in case the user doesnt input anything as inline data
-            catch( Exception e){
-                System.out.println
-                    ("error ---- did not assign any inline data or failed to follow format\n"
-                    +"-d {key:value}");
-                System.exit(1);
-            }
-            temp= temp.replace("{","");
-            temp= temp.replace("}","");
-            temp= temp.replace("\"","");
-            temp= temp.replace(" ","");
-            String[] before=temp.split(",");
-            for(int i = 0; i<before.length;i++){
-                String[] before2 = before[i].split(":");
-                inLineData.add(before2[0]);
-                inLineData.add(before2[1]);
-            }
-            list.remove("-d");
-            list.remove(index);
-        }
-        int i=0;
-        while(list.contains("-h")){
-            int index = list.indexOf("-h");
-            String temp;
-            try{
-                temp = list.get(index + 1);
-                String[] before=temp.split(":");
-                headerData.add(before[i]);
-                headerData.add(before[i+1]);
-                list.remove("-h");
-                list.remove(index);
-            }
-            //in case the user doesnt input anything as inline data
-            catch( Exception e){
-                System.out.println
-                    ("error ---- did not assign any header data or failed to follow format\n"
-                    +"-h key:value");
-                System.exit(1);
-            }
-            i=i+2;
-        }
-        if(list.contains("-f") && d_Switch==false){
-            f_Switch=true;
-            int index = list.indexOf("-f");
-            String path;
-            //in case file not found
-            try{
-                path = list.get(index + 1);
-                File file = new File(path);
-                BufferedReader f_in = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
-                String line;
-                while((line = f_in.readLine()) != null){
-                    inLineData.add(line);
-               }
-                f_in.close();
-                list.remove("-f");
-                list.remove(index);
-            }
-            //in case the user doesnt input anything as inline data
-            catch( Exception e){
-                System.out.println
-                    ("error ---- problem opening the file\n");
-                System.exit(1);
-            }
-        }
-        args = list.toArray(new String[0]);
-        return args;
-    }
+    /**
+     * Prints the help menu.
+     */
+    public static void help(){
+        String help = "\nhttpc help\n" 
+                +"\nhttpc is a curl-like application but supports HTTP protocol only.\n"
+                +"Usage:\n"
+                +"\t httpc command [arguments]\n"
+                +"The commands are:\n"
+                +"\t get \t executes a HTTP GET request and prints the response.\n"
+                +"\t post \t executes a HTTP POST request and prints the response.\n"
+                +"\t help \t prints this screen.\n"
+                +"\nUse \"httpc help [command]\" for more information about a command.\n";
 
-    // only to get the header data
-    private static String getHeaderData() {
-        String text="";
-        boolean headerInfo =false;
-        while(!headerData.isEmpty()){
-            headerInfo=true;
-            text=headerData.get(0)+": "+headerData.get(1)+"\r\n";
-            headerData.remove(0);
-            headerData.remove(0);
-        }
-        if(headerInfo==false){
-            text="Content-Type: application/x-www-form-urlencoded\r\n";
-        }
-        return text;
-    }
+        String help_get = "\nhttpc help get\n"
+                +"\nusage: httpc get [-v] [-h key:value] URL\n"
+                +"\nGet executes a HTTP GET request for a given URL.\n"
+                +"\n-v Prints the detail of the response such as protocol, status, and headers.\n"
+                +"-h key:value Associates headers to HTTP Request with the format 'key:value'.\n";
 
-    // this method formats and print the output depending on the options
-    private static void getResponse() throws IOException {
+        String help_post = "\nhttpc help post\n"
+                +"\nusage: httpc post [-v] [-h key:value] [-d inline-data] [-f file] URL\n"
+                +"\nPost executes a HTTP POST request for a given URL with inline data or from file.\n"
+                +"\n-v Prints the detail of the response such as protocol, status, and headers.\n"
+                +"-h key:value Associates headers to HTTP Request with the format 'key:value'.\n"
+                +"-d string Associates an inline data to the body HTTP POST request.\n"
+                +"-f file Associates the content of a file to the body HTTP POST request.\n"
+                +"\nEither [-d] or [-f] can be used but not both.\n";
+
+        if (isPostRequest){
+            System.out.println(help_post);
+            System.exit(0);
+        }else if (isGetRequest){
+            System.out.println(help_get);
+            System.exit(0);
+        }else{
+            System.out.println(help);
+            System.exit(0);
+        }
+    }
+    
+    /**
+     * Executes HTTP GET request for a given URL
+     */
+    public static void get(String inpuString){
+        urlParser(inpuString);  
+
+        messagBuilder = createMessage("GET /", arguments, hasHeaderData, false);
         
-        String response = s_in.readLine();
-        if(!vMode){
-            while (!response.isEmpty()) {
-                response = s_in.readLine();
-            }
-            while ((response = s_in.readLine()) != null) {
-                System.out.println( response );
-            }
-        }
-        else{
-            while ((response = s_in.readLine()) != null) {
-                System.out.println( response );
-            }
-        }
+        sendMessage(messagBuilder);        
     }
+    
+    /**
+     * Executes a HTTP POST request for a given URL with inline data or from file.
+     */
+    public static void post(String inpuString){
+        urlParser(inpuString);
+        
+        if (hasInLineData && readFromFile){
+            System.out.println("Cannot have -d and -f together. Exiting the application.");
+            System.exit(1);
+        }
+        else if (readFromFile){
+            hasInLineData = true;
+            inLineData = readingFromFile(filePath);
+            inLineData = inLineDataParser(inLineData);
+        }
+        else if (hasInLineData){
+            inLineData = inLineDataParser(inLineData);
+        }
 
-    // prints the generic help information
-    private static void getGenericHelpMessage() {
-        System.out.println("\nhttpc help\n" 
-        +"\nhttpc is a curl-like application but supports HTTP protocol only.\n"
-        +"Usage:\n"
-        +"\t httpc command [arguments]\n"
-        +"The commands are:\n"
-        +"\t get \t executes a HTTP GET request and prints the response.\n"
-        +"\t post \t executes a HTTP POST request and prints the response.\n"
-        +"\t help \t prints this screen.\n"
-        +"\nUse \"httpc help [command]\" for more information about a command.\n");
-    }
-    //prints the information for the specified action
-    private static void getSpecificHelpMessage(String action) {
-        if(action.equals("get")){
-            System.out.println("\nhttpc help get\n"
-            +"\nusage: httpc get [-v] [-h key:value] URL\n"
-            +"\nGet executes a HTTP GET request for a given URL.\n"
-            +"\n-v Prints the detail of the response such as protocol, status, and headers.\n"
-            +"-h key:value Associates headers to HTTP Request with the format 'key:value'.");
-        }
-        else if(action.equals("post")){
-            System.out.println("\nhttpc help post\n"
-            +"\nusage: httpc post [-v] [-h key:value] [-d inline-data] [-f file] URL\n"
-            +"\nPost executes a HTTP POST request for a given URL with inline data or from file.\n"
-            +"\n-v Prints the detail of the response such as protocol, status, and headers.\n"
-            +"-h key:value Associates headers to HTTP Request with the format 'key:value'.\n"
-            +"-d string Associates an inline data to the body HTTP POST request.\n"
-            +"-f file Associates the content of a file to the body HTTP POST request.\n"
-            +"\nEither [-d] or [-f] can be used but not both.\n");
-        }
-        //if does not match with any of our cases
-        else{
-            getGenericHelpMessage();
-        }
+        messagBuilder = createMessage("POST /", arguments, hasHeaderData, hasInLineData);
+
+        sendMessage(messagBuilder);
     }
 }
