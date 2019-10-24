@@ -22,9 +22,10 @@ public class httpc{
     private static String filePath = "";
     private static String url = "";
     private static String hostName = "";
+    private static String outsideDirectory = "";
     private static String arguments = "";
     private static String messagBuilder = "";
-    private static String defaultPort = "80";
+    private static String defaultPort = "8080";
     private static String[] protocol_host_args = new String[2];
     private static Socket socket = new Socket();
 
@@ -84,7 +85,11 @@ public class httpc{
      * @param url is the url to which the get/post request is made. example - 'httpbin.org/post'
      */
     public static void urlParser(String url) {
-        if (url.contains("//")){
+        if(url.contains("../")){
+            protocol_host_args = url.split("/", 2);
+            outsideDirectory = protocol_host_args[0];
+            arguments = protocol_host_args[1];
+        }else if (url.contains("//")){
             protocol_host_args = url.split("//");
             if (url.contains("/")){
                 protocol_host_args = protocol_host_args[1].split("/");
@@ -95,7 +100,9 @@ public class httpc{
             protocol_host_args = url.split("/", 2);
             hostName = protocol_host_args[0];
             arguments = protocol_host_args[1];
-        }else{
+        }
+        
+        else{
             hostName=url;
         }
 
@@ -171,7 +178,7 @@ public class httpc{
         String message = "";
         final String HTTP = (" HTTP/1.0\r\n");
         if (requestType=="GET /") {
-            message = requestType+arguments+HTTP+"\r\n";
+            message = "GET "+outsideDirectory+"/"+arguments+HTTP+"\r\n";
             if (hasHeader){
                 message = message.replace("\r\n\r\n", ("\r\n"+headerData+"\r\n"));
             }
@@ -274,7 +281,7 @@ public class httpc{
         urlParser(inpuString);  
 
         messagBuilder = createMessage("GET /", arguments, hasHeaderData, false);
-
+        
         sendMessage(messagBuilder);        
     }
     
