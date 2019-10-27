@@ -99,7 +99,7 @@ public class httpc{
             hostName=url;
         }
 
-        if (hostName.contains("localhost")){
+        if (hostName.contains(":")){
             protocol_host_args = hostName.split(":", 2);
             hostName = protocol_host_args[0];
             defaultPort = protocol_host_args[1];
@@ -173,7 +173,7 @@ public class httpc{
         if (requestType=="GET /") {
             message = requestType+arguments+HTTP+"\r\n";
             if (hasHeader){
-                message = message.replace("\r\n\r\n", ("\r\n"+headerData+"\r\n"));
+                message = message.replace("\r\n\r\n", ("\r\n"+headerData));
             }
         } else {
             message = requestType+arguments+HTTP;
@@ -200,8 +200,9 @@ public class httpc{
             BufferedReader socketBufferedReaderInputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             socketBufferedWriterOutputStream.write(messagBuilder);
             socketBufferedWriterOutputStream.flush();
+            socket.shutdownOutput();
+            
             String response = " ";
-
             while ((response = socketBufferedReaderInputStream.readLine()) != null) {
                 if ((response.length()==0) && !isVerbose){
                     StringBuilder res_recvd = new StringBuilder();
@@ -271,8 +272,8 @@ public class httpc{
         urlParser(inpuString);  
 
         messagBuilder = createMessage("GET /", arguments, hasHeaderData, false);
-        System.out.println(messagBuilder);
-        sendMessage(messagBuilder);        
+
+        sendMessage(messagBuilder); 
     }
     
     /**
@@ -294,8 +295,8 @@ public class httpc{
             inLineData = inLineDataParser(inLineData);
         }
 
-        messagBuilder = createMessage("post /", arguments, hasHeaderData, hasInLineData);
-
+        messagBuilder = createMessage("POST /", arguments, hasHeaderData, hasInLineData);
+        
         sendMessage(messagBuilder);
     }
 }
